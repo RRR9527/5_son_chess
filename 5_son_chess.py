@@ -2,6 +2,9 @@ import pygame
 import sys
 import math
 
+BLACK_STONE = 1
+WHITE_STONE = 2
+
 # 初始化 pygame 所有模块
 pygame.init()
 
@@ -118,7 +121,7 @@ class Gomoku:
         """
         self.board_size = board_size
         self.player_stone = player_stone          # 玩家棋子
-        self.ai_stone = 2 if player_stone == 1 else 1  # AI 棋子
+        self.ai_stone = WHITE_STONE if player_stone == BLACK_STONE else BLACK_STONE  # AI 棋子
 
         # 重新计算窗口尺寸以适应所选棋盘
         self.cell_size = 40
@@ -136,7 +139,7 @@ class Gomoku:
         self.board = [[0] * self.board_size for _ in range(self.board_size)]
         self.game_over = False
         self.winner = None
-        self.current_player = 1           # 黑棋永远先手
+        self.current_player = BLACK_STONE           # 黑棋永远先手
         self.last_move = None
         self.move_history = []            # 记录每一步 (row, col, player)
         self.paused = False               # 是否处于暂停状态
@@ -147,24 +150,24 @@ class Gomoku:
         self.hint_pos = None              # 推荐落子位置 (row, col)
 
         # 如果玩家执白，AI需立即走第一步（黑棋）
-        if self.player_stone == 2:
-            self._ai_first_move()
+        # if self.player_stone == WHITE_STONE:
+        #     self._ai_first_move()
 
-    def _ai_first_move(self):
-        """AI 执黑先手时自动落子（天元或附近）"""
-        c = self.board_size // 2
-        # 优先天元，若已被占（不可能）则向右下
-        if self.board[c][c] == 0:
-            self._do_place(c, c)
-        else:
-            self._do_place(c, c+1)
+    # def _ai_first_move(self):
+    #     """AI 执黑先手时自动落子（天元或附近）"""
+    #     c = self.board_size // 2
+    #     # 优先天元，若已被占（不可能）则向右下
+    #     if self.board[c][c] == 0:
+    #         self._do_place(c, c)
+    #     else:
+    #         self._do_place(c, c+1)
 
     def reset(self):
         """重置棋盘到初始状态，保留颜色和尺寸设置"""
         self.board = [[0] * self.board_size for _ in range(self.board_size)]
         self.game_over = False
         self.winner = None
-        self.current_player = 1
+        self.current_player = BLACK_STONE
         self.last_move = None
         self.move_history.clear()
         self.paused = False
@@ -173,8 +176,8 @@ class Gomoku:
         self.show_hint = False
         self.hint_pos = None
         # 若AI执黑则再走第一步
-        if self.player_stone == 2:
-            self._ai_first_move()
+        # if self.player_stone == WHITE_STONE:
+        #     self._ai_first_move()
 
     # ---------- 落子与胜负逻辑 ----------
     def _do_place(self, row, col):
@@ -212,7 +215,7 @@ class Gomoku:
             self.current_player = None
             return True
         # 切换玩家
-        self.current_player = 2 if self.current_player == 1 else 1
+        self.current_player = WHITE_STONE if self.current_player == BLACK_STONE else BLACK_STONE
         return True
 
     def check_win(self, row, col, player):
@@ -245,6 +248,9 @@ class Gomoku:
             if 0 in row:
                 return False
         return True
+
+    def back_to_menu(self):
+        pass
 
     # ---------- AI 评估系统 (优化版，已防止边角冲四) ----------
     PATTERNS = {
@@ -369,7 +375,7 @@ class Gomoku:
     def undo_last_move(self):
         """撤销最后一步落子，更新棋盘状态和历史记录"""
         if not self.move_history:
-            return
+            return  # ???这是在干嘛
         row, col, player = self.move_history.pop()
         self.board[row][col] = 0                       # 清除棋子
         # 如果之前游戏结束，撤销后应恢复游戏
@@ -481,7 +487,7 @@ class Gomoku:
         info_surf = self.font.render(text, True, (50,50,50))
         self.screen.blit(info_surf, (self.margin, self.window_height - 50))
 
-        # 暂停按钮（右上角）
+        # 暂停按钮（右下角）
         btn_text = "暂停" if not self.paused else "继续"
         btn_surf = self.small_font.render(btn_text, True, (50,50,50))
         btn_w = btn_surf.get_width() + 10
@@ -513,7 +519,8 @@ class Gomoku:
         options = [
             ("悔棋", self.undo_two_moves),
             ("重新开始", self.reset),
-            ("继续游戏", self._toggle_pause)
+            ("继续游戏", self._toggle_pause),
+            ("返回菜单", self.back_to_menu)
         ]
         for i, (label, action) in enumerate(options):
             opt_x = menu_x + 50
@@ -532,6 +539,12 @@ class Gomoku:
     # ---------- 主循环 ----------
     def run(self):
         clock = pygame.time.Clock()
+        options = [
+            ("悔棋", self.undo_two_moves),
+            ("重新开始", self.reset),
+            ("继续游戏", self._toggle_pause),
+            ("返回菜单", self.back_to_menu)
+        ]
         while True:
             # ================= 事件处理 =================
             for event in pygame.event.get():
@@ -551,9 +564,7 @@ class Gomoku:
                         self._toggle_pause()
                     # 暂停菜单按钮点击
                     elif self.paused:
-                        for i, (label, action) in enumerate([("悔棋", self.undo_two_moves),
-                                                              ("重新开始", self.reset),
-                                                              ("继续游戏", self._toggle_pause)]):
+                        for i, (label, action) in enumerate(options):
                             opt_attr = f"opt{i}_rect"
                             if hasattr(self, opt_attr) and getattr(self, opt_attr).collidepoint(mx, my):
                                 action()
